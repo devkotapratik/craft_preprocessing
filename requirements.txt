@@ -1,5 +1,6 @@
+annotated-types==0.5.0
 anyio==3.7.1
-argon2-cffi==21.3.0
+argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
 arrow==1.2.3
 asttokens==2.2.1
@@ -14,8 +15,8 @@ catalogue==2.0.9
 certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
-click==8.1.6
-cmake==3.27.1
+click==8.1.7
+cmake==3.27.2
 comm==0.1.4
 confection==0.1.1
 cupy==12.2.0
@@ -23,8 +24,8 @@ cymem==2.0.7
 debugpy==1.6.7.post1
 decorator==5.1.1
 defusedxml==0.7.1
-en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.5.0/en_core_web_trf-3.5.0-py3-none-any.whl
-exceptiongroup==1.1.2
+en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.6.1/en_core_web_trf-3.6.1-py3-none-any.whl#sha256=f9a1f0ae83954c49ebf92c0f7043ea02de51db59bf6cd3ed849d46928612c806
+exceptiongroup==1.1.3
 executing==1.2.0
 fastjsonschema==2.18.0
 fastrlock==0.8.1
@@ -52,9 +53,9 @@ jupyter-events==0.7.0
 jupyter-lsp==2.2.0
 jupyter_client==8.3.0
 jupyter_core==5.3.1
-jupyter_server==2.7.0
+jupyter_server==2.7.2
 jupyter_server_terminals==0.4.4
-jupyterlab==4.0.4
+jupyterlab==4.0.5
 jupyterlab-pygments==0.2.2
 jupyterlab-widgets==3.0.8
 jupyterlab_server==2.24.0
@@ -66,7 +67,7 @@ mistune==3.0.1
 mpmath==1.3.0
 murmurhash==1.0.9
 nbclient==0.8.0
-nbconvert==7.7.3
+nbconvert==7.7.4
 nbformat==5.9.2
 nest-asyncio==1.5.7
 networkx==3.1
@@ -99,7 +100,8 @@ psutil==5.9.5
 ptyprocess==0.7.0
 pure-eval==0.2.2
 pycparser==2.21
-pydantic==1.10.12
+pydantic==2.2.1
+pydantic_core==2.6.1
 Pygments==2.16.1
 python-dateutil==2.8.2
 python-json-logger==2.0.7
@@ -120,7 +122,7 @@ smart-open==6.3.0
 smmap==5.0.0
 sniffio==1.3.0
 soupsieve==2.4.1
-spacy==3.5.4
+spacy==3.6.1
 spacy-alignments==0.9.0
 spacy-legacy==3.0.12
 spacy-loggers==1.0.4
