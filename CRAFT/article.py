@@ -172,12 +172,14 @@ class Sentence:
         self.next = next
         self.annotations = None
         self.updated_sentences = []
+        self.source = None
     
     def _get_info(self):
         all_annots = [i._get_info() for i in self.annotations]
         info = f"Original Sentence: {self.original_text}\n" + \
             f"Sentence: {self.text}\nSpan: {self.span}" + \
-            f"\nNext: {repr(self.next)}\nAnnotations: {all_annots}"
+            f"\nNext: {repr(self.next)}\nSource: {self.source}" + \
+            f"\nAnnotations: {all_annots}"
         if self.updated_sentences:
             temp_info = []
             for sent in self.updated_sentences:
@@ -194,6 +196,7 @@ class Sentence:
         temp = Sentence(self.text, self.span[0], self.next)
         temp.original_text = self.original_text
         temp.annotations = self.annotations.copy()
+        temp.source = self.source
         temp.updated_sentences = [i for i in self.updated_sentences]
         return temp
     
@@ -202,12 +205,13 @@ class Article:
     """An article has the entire text, corresponding annotations as well as all sentences in 
     a list (if 'segment_sentences' is called).
     """
-    def __init__(self, article: str, annotations: list):
+    def __init__(self, article: str, annotations: list, source_id: str=None):
         self.original_text = article
         self.original_annotations = annotations
-        self.annotations = annotations
+        self.annotations = None
         self.text = None
         self.sentences = []
+        self.source_id = source_id
         self.idx = 0
         if len(self.original_annotations):
             if isinstance(self.original_annotations[0], dict):
@@ -221,11 +225,14 @@ class Article:
     def _split_on_newline(self, inplace=True):
         """Separates title, headings and paragraphs by new lines"""
         temp_sentences, temp_idx = [], 0
-        for match in re.finditer(r"[\n]{1,}", self.original_text):
+        text = self.text if self.text else self.original_text
+        for match in re.finditer(r"[\n]{1,}", text):
             span = match.span() # Index where the rule matches i.e., where there is a new line
-            sentence = self.original_text[temp_idx: span[0]] # Get string from previous index to
+            sentence = text[temp_idx: span[0]] # Get string from previous index to
             # the span index where the rule matches
-            temp_sentences.append(Sentence(sentence, start_idx=temp_idx, next=match.group()))
+            new_sent = Sentence(sentence, start_idx=temp_idx, next=match.group())
+            new_sent.source_id = self.source_id
+            temp_sentences.append(new_sent)
             temp_idx = span[1] # Update the index so that the next sentences starts from here
         if inplace:
             self.sentences = temp_sentences
@@ -267,6 +274,7 @@ class Article:
                         # of the current sentence, append to the list of required annotations
                 updated_sent = Sentence(text, start_idx, next)
                 updated_sent.annotations = reqd_annot # Add annotations to the sentence
+                updated_sent.source = self.source_id
                 temp_sents.append(updated_sent)
             segmented_sents.extend(temp_sents)
         if not inplace:
@@ -274,7 +282,7 @@ class Article:
         self.sentences = segmented_sents
     
     def remove_citations(self, inplace=True):
-        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_text
+        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_annotations
         text = self.text if self.text else self.original_text
         new_text, new_annotations = remove_citations_from_text(text, annotations)
         if not inplace:
@@ -288,7 +296,7 @@ class Article:
         ) for i in new_annotations]
     
     def remove_multiple_whitespaces(self, inplace=True):
-        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_text
+        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_annotations
         text = self.text if self.text else self.original_text
         new_text, new_annotations = remove_multiple_whitespaces_from_text(text, annotations)
         if not inplace:
