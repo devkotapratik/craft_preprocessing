@@ -109,5 +109,59 @@ def get_article_by_id(source_id: str, data_dir: str | Path):
                         "concept": mention_class.text
                     })
     annotations = sorted(annotations.values(), key=lambda x: x.get("span")[0])
-    article = Article(article, annotations)
+    article = Article(article, annotations, source_id)
     return article
+
+
+def disjoint_and_overlapping(sentence: Sentence, inplace=True):
+    """ Returns a tuple of (
+        annotations which do not span over other annotations (disjoint),
+        annotations that span over other annotations (overlapping).
+    
+    Input Params:
+    sentence (Sentence): sentence with text and annotations attributes
+    
+    Return Params:
+    (
+        disjoint (list): Disjointed list of annotations (empty if None)
+        overlapping (list): overlapping annotations (empty if None)
+    )
+
+    E.g.
+    sentence.text: 'The data so far suggest that the ancestral TACC protein played a 
+    role in centrosomal/mitotic spindle dynamics.'
+
+    sentence.annotations: [
+        {'span': [(73, 84)], 'spanned_text': 'centrosomal', 'id': 'GO:0005813', 'concept': 'centrosome'}
+        {'span': [(85, 92)], 'spanned_text': 'mitotic', 'id': 'GO:0007067', 'concept': 'mitotic nuclear division'}
+        {'span': [(85, 100)], 'spanned_text': 'mitotic spindle', 'id': 'GO:0072686', 'concept': 'mitotic spindle'}
+    ]
+
+    Result:
+    disjoint: [
+        {'span': [(73, 84)], 'spanned_text': 'centrosomal', 'id': 'GO:0005813', 'concept': 'centrosome'}
+    ]
+
+    overlapping: [
+        {'span': [(85, 92)], 'spanned_text': 'mitotic', 'id': 'GO:0007067', 'concept': 'mitotic nuclear division'}
+        {'span': [(85, 100)], 'spanned_text': 'mitotic spindle', 'id': 'GO:0072686', 'concept': 'mitotic spindle'}
+    ]
+    """
+    annotations = sentence.annotations
+    disjoint = []
+    for i in range(len(annotations)):
+        span_i = annotations[i].span
+        start_i, end_i = span_i[0][0], span_i[-1][1]
+        overlap = 0
+        for j in range(len(annotations)):
+            span_j = annotations[j].span
+            start_j, end_j = span_j[0][0], span_j[-1][1]
+            if start_j <= start_i < end_j or start_j <= end_i < end_j or \
+                start_i <= start_j < end_i or start_i <= end_j < end_i:
+                overlap += 1
+        if overlap <= 1:
+            disjoint.append(annotations[i])
+    disjoint = sorted(disjoint, key=lambda k: k.span[0][0], reverse=True)
+    overlapping = [i for i in annotations if i not in disjoint]
+    overlapping = sorted(overlapping, key=lambda k: k.span[0][0])
+    return disjoint, overlapping
