@@ -367,7 +367,7 @@ class SentenceGroup():
         )
     
     def __len__(self):
-        return len(self.input_list)
+        return len(self.sentences)
 
 
 class AnnotationGroup():
@@ -415,4 +415,4 @@ class AnnotationGroup():
         )
 
     def __len__(self):
-        return len(self.input_list)
+        return len(self.annotations)
