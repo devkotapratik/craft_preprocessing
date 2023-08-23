@@ -1,4 +1,5 @@
 import re
+import copy
 from .exceptions import MissingParserError
 
 
@@ -144,9 +145,10 @@ class Annotation:
         self.overlapping = overlapping
     
     def copy(self):
-        temp = Annotation(self.span, self.spanned_text, self.concept, self.id)
-        temp.disjointed, temp.overlapping = self.disjointed, self.overlapping
-        return temp
+        return copy.copy(self)
+        # temp = Annotation(self.span, self.spanned_text, self.concept, self.id)
+        # temp.disjointed, temp.overlapping = self.disjointed, self.overlapping
+        # return temp
     
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -193,12 +195,13 @@ class Sentence:
         print(self._get_info())
 
     def copy(self):
-        temp = Sentence(self.text, self.span[0], self.next)
-        temp.original_text = self.original_text
-        temp.annotations = self.annotations.copy()
-        temp.source = self.source
-        temp.updated_sentences = [i for i in self.updated_sentences]
-        return temp
+        return copy.copy(self)
+        # temp = Sentence(self.text, self.span[0], self.next)
+        # temp.original_text = self.original_text
+        # temp.annotations = self.annotations.copy()
+        # temp.source = self.source
+        # temp.updated_sentences = [i for i in self.updated_sentences]
+        # return temp
     
 
 class Article:
@@ -215,12 +218,13 @@ class Article:
         self.idx = 0
         if len(self.original_annotations):
             if isinstance(self.original_annotations[0], dict):
-                self.annotations = [Annotation(
-                    span=i.get("span"),
-                    spanned_text=i.get("spanned_text"),
-                    id=i.get("id"),
-                    concept=i.get("concept")
-                ) for i in annotations]
+                self.annotations = AnnotationGroup([
+                    Annotation(
+                        span=i.get("span"),
+                        spanned_text=i.get("spanned_text"),
+                        id=i.get("id"),
+                        concept=i.get("concept")
+                    ) for i in annotations])
             
     def _split_on_newline(self, inplace=True):
         """Separates title, headings and paragraphs by new lines"""
@@ -234,6 +238,7 @@ class Article:
             new_sent.source_id = self.source_id
             temp_sentences.append(new_sent)
             temp_idx = span[1] # Update the index so that the next sentences starts from here
+        temp_sentences = SentenceGroup(temp_sentences)
         if inplace:
             self.sentences = temp_sentences
             self.idx = temp_idx
@@ -273,38 +278,141 @@ class Article:
                         # reqd_annot.append(annot) # If there are annotations whose span lies within the span
                         # of the current sentence, append to the list of required annotations
                 updated_sent = Sentence(text, start_idx, next)
-                updated_sent.annotations = reqd_annot # Add annotations to the sentence
+                updated_sent.annotations = AnnotationGroup(reqd_annot) # Add annotations to the sentence
                 updated_sent.source = self.source_id
                 temp_sents.append(updated_sent)
             segmented_sents.extend(temp_sents)
+        segmented_sents = SentenceGroup(segmented_sents)
         if not inplace:
             return segmented_sents
         self.sentences = segmented_sents
     
     def remove_citations(self, inplace=True):
-        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_annotations
+        annotations = [
+            i._get_info() for i in self.annotations
+        ] if self.annotations else self.original_annotations
         text = self.text if self.text else self.original_text
         new_text, new_annotations = remove_citations_from_text(text, annotations)
         if not inplace:
             return new_text, new_annotations
         self.text = new_text
-        self.annotations = [Annotation(
-            span=i.get("span"),
-            spanned_text=i.get("spanned_text"),
-            id=i.get("id"),
-            concept=i.get("concept")
-        ) for i in new_annotations]
+        self.annotations = AnnotationGroup([
+            Annotation(
+                span=i.get("span"),
+                spanned_text=i.get("spanned_text"),
+                id=i.get("id"),
+                concept=i.get("concept")
+            ) for i in new_annotations])
     
     def remove_multiple_whitespaces(self, inplace=True):
-        annotations = [i._get_info() for i in self.annotations] if self.annotations else self.original_annotations
+        annotations = [
+            i._get_info() for i in self.annotations
+        ] if self.annotations else self.original_annotations
         text = self.text if self.text else self.original_text
         new_text, new_annotations = remove_multiple_whitespaces_from_text(text, annotations)
         if not inplace:
             return new_text, new_annotations
         self.text = new_text
-        self.annotations = [Annotation(
-            span=i.get("span"),
-            spanned_text=i.get("spanned_text"),
-            id=i.get("id"),
-            concept=i.get("concept")
-        ) for i in new_annotations]
+        self.annotations = AnnotationGroup([
+            Annotation(
+                span=i.get("span"),
+                spanned_text=i.get("spanned_text"),
+                id=i.get("id"),
+                concept=i.get("concept")
+            ) for i in new_annotations])
+
+
+class SentenceGroup():
+    def __init__(self, sentences, span=None):
+        try:
+            if span: assert isinstance(span, tuple) and len(span) == 2 and \
+                    all(isinstance(i, int) for i in span)
+        except AssertionError as assert_err:
+            print("Group should have span of type tuple and can only contain two integers inside the tuple")
+            raise AssertionError
+        try:
+            assert isinstance(sentences, list) or isinstance(sentences, tuple)
+            assert all(isinstance(i, Sentence) for i in sentences)
+        except AssertionError as assert_err:
+            print("Sentences should be of type 'list' or 'tuple' and all items should be of type 'Sentence'")
+            raise AssertionError
+        self.span = span
+        self.sentences = sentences
+        if len(self.sentences):
+            self.span = (min(i.span[0] for i in self.sentences),
+                max(i.span[1] for i in self.sentences)
+            )
+    
+    def __iter__(self):
+        self.idx = 0
+        return self
+
+    def __next__(self):
+        if self.idx < len(self.sentences):
+            value = self.sentences[self.idx]
+            self.idx += 1
+            return value
+        else:
+            raise StopIteration
+    
+    def copy(self):
+        return copy.copy(self)
+    
+    def _get_info(self):
+        temp = [i._get_info() for i in self.sentences]
+        if isinstance(temp, tuple): temp = tuple(temp)
+        return dict(
+            span=self.span,
+            sentences=temp
+        )
+    
+    def __len__(self):
+        return len(self.input_list)
+
+
+class AnnotationGroup():
+    def __init__(self, annotations, span=None):
+        try:
+            if span: assert isinstance(span, tuple) and len(span) == 2 and \
+                all(isinstance(i, int) for i in span)
+        except AssertionError as assert_err:
+            print("Group should have span of type tuple and can only contain two integers inside the tuple")
+            raise AssertionError
+        try:
+            assert isinstance(annotations, list) or isinstance(annotations, tuple)
+            assert all(isinstance(i, Annotation) for i in annotations)
+        except AssertionError as assert_err:
+            print("Annotations should be of type 'list' or 'tuple' and all items should be of type 'Annotation'")
+            raise AssertionError
+        self.span = span
+        self.annotations = annotations
+        if len(self.annotations):
+            self.span = (min(i.span[0][0] for i in self.annotations),
+                max(i.span[-1][1] for i in self.annotations)
+            )
+    
+    def __iter__(self):
+        self.idx = 0
+        return self
+
+    def __next__(self):
+        if self.idx < len(self.annotations):
+            value = self.annotations[self.idx]
+            self.idx += 1
+            return value
+        else:
+            raise StopIteration
+    
+    def copy(self):
+        return copy.copy(self)
+    
+    def _get_info(self):
+        temp = [i._get_info() for i in self.annotations]
+        if isinstance(temp, tuple): temp = tuple(temp)
+        return dict(
+            span=self.span,
+            annotations=temp
+        )
+
+    def __len__(self):
+        return len(self.input_list)
